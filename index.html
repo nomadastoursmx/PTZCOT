@@ -347,6 +347,13 @@
             flex: 1;
         }
 
+        .iva-info {
+            font-size: 11px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
         @media (min-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr 1fr;
@@ -420,12 +427,13 @@
 
                 <div class="items-section">
                     <h3>🛞 Productos</h3>
+                    <div class="iva-info">* Los precios ingresados ya incluyen IVA (16%)</div>
                     <div id="items-container">
                         <div class="item-row">
                             <input type="text" placeholder="Medida" class="medida">
                             <input type="text" placeholder="Marca" class="marca">
                             <input type="number" placeholder="Cantidad" class="cantidad" min="1" value="1">
-                            <input type="number" placeholder="Precio c/u" class="precio" step="0.01">
+                            <input type="number" placeholder="Precio c/u (con IVA)" class="precio" step="0.01">
                             <input type="number" placeholder="Total" class="total" readonly="">
                             <button type="button" class="btn btn-danger" onclick="removeItem(this)">❌</button>
                         </div>
@@ -478,7 +486,7 @@
                 <input type="text" placeholder="Medida" class="medida">
                 <input type="text" placeholder="Marca" class="marca">
                 <input type="number" placeholder="Cantidad" class="cantidad" min="1" value="1">
-                <input type="number" placeholder="Precio c/u" class="precio" step="0.01">
+                <input type="number" placeholder="Precio c/u (con IVA)" class="precio" step="0.01">
                 <input type="number" placeholder="Total" class="total" readonly>
                 <button type="button" class="btn btn-danger" onclick="removeItem(this)">❌</button>
             `;
@@ -528,34 +536,38 @@
                 });
 
                 let itemsHtml = '';
-                let subtotal = 0;
+                let subtotalSinIva = 0;
                 const items = document.querySelectorAll('.item-row');
                 
                 items.forEach((item, index) => {
                     const medida = item.querySelector('.medida').value;
                     const marca = item.querySelector('.marca').value;
                     const cantidad = parseFloat(item.querySelector('.cantidad').value) || 0;
-                    const precio = parseFloat(item.querySelector('.precio').value) || 0;
-                    const total = cantidad * precio;
+                    const precioConIva = parseFloat(item.querySelector('.precio').value) || 0;
+                    const totalConIva = cantidad * precioConIva;
                     
-                    if (medida || marca || cantidad || precio) {
+                    if (medida || marca || cantidad || precioConIva) {
+                        // Calcular subtotal sin IVA
+                        const precioSinIva = precioConIva / 1.16;
+                        const subtotalItemSinIva = precioSinIva * cantidad;
+                        
                         itemsHtml += `
                             <tr>
                                 <td>${medida}</td>
                                 <td>${marca}</td>
                                 <td>${cantidad}</td>
-                                <td>${precio.toFixed(2)}</td>
-                                <td>${total.toFixed(2)}</td>
+                                <td>$${precioConIva.toFixed(2)}</td>
+                                <td>$${totalConIva.toFixed(2)}</td>
                             </tr>
                         `;
-                        subtotal += total;
+                        subtotalSinIva += subtotalItemSinIva;
                     }
                 });
 
-                const iva = subtotal * 0.16;
-                const totalConIva = subtotal + iva;
+                const iva = subtotalSinIva * 0.16;
+                const totalConIva = subtotalSinIva + iva;
 
-                document.getElementById('floating-total').textContent = `Total: ${totalConIva.toFixed(2)}`;
+                document.getElementById('floating-total').textContent = `Total: $${totalConIva.toFixed(2)}`;
 
                 const previewHtml = `
                     <div class="preview-header">
@@ -585,8 +597,8 @@
                                     <th>Medida</th>
                                     <th>Marca</th>
                                     <th>Cantidad</th>
-                                    <th>Precio u/n</th>
-                                    <th>Total</th>
+                                    <th>Precio u/n (IVA incl.)</th>
+                                    <th>Total (IVA incl.)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -596,10 +608,10 @@
                     </div>
 
                     <div class="total-section">
-                        <div>Subtotal: ${subtotal.toFixed(2)}</div>
-                        <div>IVA (16%): ${iva.toFixed(2)}</div>
+                        <div>Subtotal (sin IVA): $${subtotalSinIva.toFixed(2)}</div>
+                        <div>IVA (16%): $${iva.toFixed(2)}</div>
                         <div style="font-size: 16px; color: #e74c3c; margin-top: 10px;">
-                            TOTAL: ${totalConIva.toFixed(2)}
+                            TOTAL: $${totalConIva.toFixed(2)}
                         </div>
                     </div>
 
@@ -679,31 +691,35 @@
                 mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
 
                 const items = document.querySelectorAll('.item-row');
-                let subtotal = 0;
+                let subtotalSinIva = 0;
                 
                 items.forEach((item, index) => {
                     const medida = item.querySelector('.medida').value;
                     const marca = item.querySelector('.marca').value;
                     const cantidad = parseFloat(item.querySelector('.cantidad').value) || 0;
-                    const precio = parseFloat(item.querySelector('.precio').value) || 0;
-                    const total = cantidad * precio;
+                    const precioConIva = parseFloat(item.querySelector('.precio').value) || 0;
+                    const totalConIva = cantidad * precioConIva;
                     
-                    if (medida || marca || cantidad || precio) {
+                    if (medida || marca || cantidad || precioConIva) {
+                        // Calcular subtotal sin IVA
+                        const precioSinIva = precioConIva / 1.16;
+                        const subtotalItemSinIva = precioSinIva * cantidad;
+                        
                         mensaje += `${index + 1}. ${medida} - ${marca}\n`;
-                        mensaje += `   Cantidad: ${cantidad} | Precio: ${precio.toFixed(2)}\n`;
-                        mensaje += `   Subtotal: ${total.toFixed(2)}\n\n`;
-                        subtotal += total;
+                        mensaje += `   Cantidad: ${cantidad} | Precio (IVA incl.): $${precioConIva.toFixed(2)}\n`;
+                        mensaje += `   Total: $${totalConIva.toFixed(2)}\n\n`;
+                        subtotalSinIva += subtotalItemSinIva;
                     }
                 });
 
-                const iva = subtotal * 0.16;
-                const totalConIva = subtotal + iva;
+                const iva = subtotalSinIva * 0.16;
+                const totalConIva = subtotalSinIva + iva;
 
                 mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
                 mensaje += `💰 *RESUMEN:*\n`;
-                mensaje += `Subtotal: ${subtotal.toFixed(2)}\n`;
-                mensaje += `IVA (16%): ${iva.toFixed(2)}\n`;
-                mensaje += `*TOTAL: ${totalConIva.toFixed(2)}*\n\n`;
+                mensaje += `Subtotal (sin IVA): $${subtotalSinIva.toFixed(2)}\n`;
+                mensaje += `IVA (16%): $${iva.toFixed(2)}\n`;
+                mensaje += `*TOTAL: $${totalConIva.toFixed(2)}*\n\n`;
                 
                 mensaje += `✅ Incluye: IVA, Montaje, Balanceo, Alineación, Cambio de válvula\n`;
                 mensaje += `🛡️ Garantía contra defecto de fabricación\n`;
