@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotizador - Peter's Wheels</title>
+    
+    <!-- Bibliotecas para generar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -194,6 +199,14 @@
             margin-top: 15px;
         }
 
+        .btn-pdf {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 1.1em;
+            padding: 15px 20px;
+            margin-top: 10px;
+        }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
@@ -294,6 +307,46 @@
             text-align: center;
         }
 
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .share-buttons .btn {
+            flex: 1;
+        }
+
         @media (min-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr 1fr;
@@ -391,15 +444,26 @@
                 <div class="preview" id="preview">
                     <!-- La vista previa se generará aquí -->
                 </div>
-                <button type="button" class="btn btn-whatsapp" onclick="sendWhatsApp()">
-                    📱 Enviar por WhatsApp
-                </button>
+                
+                <div class="share-buttons">
+                    <button type="button" class="btn btn-whatsapp" onclick="sendWhatsApp()">
+                        📱 WhatsApp
+                    </button>
+                    <button type="button" class="btn btn-pdf" onclick="generatePDF()">
+                        📄 Generar PDF
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="floating-total" id="floating-total">
         Total: $0.00
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Generando PDF, por favor espere...</p>
     </div>
 
     <script>
@@ -480,8 +544,8 @@
                                 <td>${medida}</td>
                                 <td>${marca}</td>
                                 <td>${cantidad}</td>
-                                <td>$${precio.toFixed(2)}</td>
-                                <td>$${total.toFixed(2)}</td>
+                                <td>${precio.toFixed(2)}</td>
+                                <td>${total.toFixed(2)}</td>
                             </tr>
                         `;
                         subtotal += total;
@@ -491,7 +555,7 @@
                 const iva = subtotal * 0.16;
                 const totalConIva = subtotal + iva;
 
-                document.getElementById('floating-total').textContent = `Total: $${totalConIva.toFixed(2)}`;
+                document.getElementById('floating-total').textContent = `Total: ${totalConIva.toFixed(2)}`;
 
                 const previewHtml = `
                     <div class="preview-header">
@@ -532,10 +596,10 @@
                     </div>
 
                     <div class="total-section">
-                        <div>Subtotal: $${subtotal.toFixed(2)}</div>
-                        <div>IVA (16%): $${iva.toFixed(2)}</div>
+                        <div>Subtotal: ${subtotal.toFixed(2)}</div>
+                        <div>IVA (16%): ${iva.toFixed(2)}</div>
                         <div style="font-size: 16px; color: #e74c3c; margin-top: 10px;">
-                            TOTAL: $${totalConIva.toFixed(2)}
+                            TOTAL: ${totalConIva.toFixed(2)}
                         </div>
                     </div>
 
@@ -626,8 +690,8 @@
                     
                     if (medida || marca || cantidad || precio) {
                         mensaje += `${index + 1}. ${medida} - ${marca}\n`;
-                        mensaje += `   Cantidad: ${cantidad} | Precio: $${precio.toFixed(2)}\n`;
-                        mensaje += `   Subtotal: $${total.toFixed(2)}\n\n`;
+                        mensaje += `   Cantidad: ${cantidad} | Precio: ${precio.toFixed(2)}\n`;
+                        mensaje += `   Subtotal: ${total.toFixed(2)}\n\n`;
                         subtotal += total;
                     }
                 });
@@ -637,9 +701,9 @@
 
                 mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
                 mensaje += `💰 *RESUMEN:*\n`;
-                mensaje += `Subtotal: $${subtotal.toFixed(2)}\n`;
-                mensaje += `IVA (16%): $${iva.toFixed(2)}\n`;
-                mensaje += `*TOTAL: $${totalConIva.toFixed(2)}*\n\n`;
+                mensaje += `Subtotal: ${subtotal.toFixed(2)}\n`;
+                mensaje += `IVA (16%): ${iva.toFixed(2)}\n`;
+                mensaje += `*TOTAL: ${totalConIva.toFixed(2)}*\n\n`;
                 
                 mensaje += `✅ Incluye: IVA, Montaje, Balanceo, Alineación, Cambio de válvula\n`;
                 mensaje += `🛡️ Garantía contra defecto de fabricación\n`;
@@ -673,6 +737,83 @@
             }
         }
 
+        function generatePDF() {
+            try {
+                // Mostrar indicador de carga
+                document.getElementById('loading').style.display = 'flex';
+                
+                // Obtener el contenido de la vista previa
+                const element = document.getElementById('preview');
+                
+                // Configurar opciones para html2canvas
+                const opt = {
+                    margin: 10,
+                    filename: `Cotizacion_${document.getElementById('cliente').value || 'Cliente'}_${new Date().toLocaleDateString('es-MX').replace(/\//g, '-')}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                
+                // Usar html2canvas para capturar el contenido
+                html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+                    
+                    const imgWidth = 210; // Ancho A4 en mm
+                    const pageHeight = 295; // Altura A4 en mm
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 0;
+                    
+                    // Añadir imagen al PDF
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    
+                    // Si el contenido es más largo que una página, añadir páginas adicionales
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    // Guardar el PDF
+                    pdf.save(opt.filename);
+                    
+                    // Ocultar indicador de carga
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    // Opción para compartir el PDF si el dispositivo lo soporta
+                    if (navigator.share) {
+                        // Convertir el PDF a blob para compartir
+                        const pdfBlob = pdf.output('blob');
+                        const file = new File([pdfBlob], opt.filename, { type: 'application/pdf' });
+                        
+                        navigator.share({
+                            title: 'Cotización de llantas',
+                            text: 'Te envío la cotización de llantas solicitada',
+                            files: [file]
+                        }).catch(err => {
+                            console.log('Error al compartir:', err);
+                        });
+                    }
+                }).catch(error => {
+                    console.error("Error al generar PDF:", error);
+                    document.getElementById('loading').style.display = 'none';
+                    alert("Error al generar PDF. Por favor intente nuevamente.");
+                });
+            } catch (error) {
+                console.error("Error en generatePDF:", error);
+                document.getElementById('loading').style.display = 'none';
+                alert("Error al generar PDF. Por favor intente nuevamente.");
+            }
+        }
+
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
             try {
@@ -698,5 +839,5 @@
             }
         });
     </script>
-
-</body></html>
+</body>
+</html>
